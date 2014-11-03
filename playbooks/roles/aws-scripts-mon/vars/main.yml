@@ -1,0 +1,25 @@
+---
+user: ec2-user
+version: 1.1.0
+filename: CloudWatchMonitoringScripts-v{{ version }}.zip
+download_url: http://ec2-downloads.s3.amazonaws.com/cloudwatch-samples/{{ filename }}
+
+path_to_download: "/tmp/{{ filename }}"
+
+home_dir: "/home/{{ user }}"
+script_dir: "{{ home_dir }}/aws-scripts-mon"
+path_to_script: "{{ script_dir }}/mon-put-instance-data.pl"
+wrapper_script: "aws-scripts-mon.sh"
+
+access_key: "{{ aws_cloudwatch_access_key_id }}"
+secret_key: "{{ aws_cloudwatch_secret_access_key }}"
+
+metrics_mem: '--mem-util --mem-used --mem-avail'
+metrics_swap: '--swap-util --swap-used'
+metrics_disk: '--disk-space-util --disk-space-used --disk-space-avail'
+
+cron:
+  hour: "*"
+  minute: "*/5"
+  job: "{{ script_dir }}/{{ wrapper_script }}"
+

@@ -1,0 +1,4 @@
+---
+
+- name: install git
+  yum: pkg=git state=present

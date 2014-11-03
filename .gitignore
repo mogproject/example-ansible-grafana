@@ -1,0 +1,9 @@
+# for Mac
+.DS_Store
+
+# Configuration file for Dotenv
+.env
+
+# vagrant specific
+.vagrant/
+vagrant_ansible_inventory_*

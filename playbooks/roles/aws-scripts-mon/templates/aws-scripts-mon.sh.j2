@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# wrapper script for mon-put-instance-data.pl
+#
+
+# get absolute path of script directory
+SCRIPT_DIR=$( cd "$( dirname "$0" )" && pwd -P )
+
+# get list of local disks
+DISKS=$(df --output=source,target | grep ^/dev | awk '{print $2}')
+
+# set arguments
+ARGS="--aws-credential-file=$SCRIPT_DIR/awscreds.conf"
+ARGS="$ARGS --from-cron"
+
+ARGS="$ARGS {{ metrics_mem }}"
+ARGS="$ARGS {{ metrics_swap }}"
+
+for disk in $DISKS; do
+    ARGS="$ARGS --disk-path=$disk {{ metrics_disk }}"
+done
+
+# run script
+$SCRIPT_DIR/mon-put-instance-data.pl $ARGS

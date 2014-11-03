@@ -1,0 +1,125 @@
+---
+#
+# install packages
+#
+- name: install dependencies
+  yum: name={{ item }} state=present enablerepo=epel
+  with_items:
+    - gcc
+    - gcc-c++
+    - make
+    - python-yaml
+    - libselinux-python
+    - pycairo
+    - python-devel
+    - python-carbon
+  tags: graphite
+
+- name: install uwsgi
+  pip: name={{ item }} state=present
+  with_items:
+    - "django<1.6"
+    - "Twisted<12"
+    - django-tagging
+    - uwsgi
+  tags: graphite
+
+- name: check if graphite-web is installed
+  command: /usr/bin/test -e {{ graphite_python }}
+  ignore_errors: True
+  changed_when: False
+  failed_when: False
+  register: is_installed
+  tags: graphite
+
+- name: install graphite
+  pip: name={{ item }} state=present
+  with_items: graphite-web
+  when: is_installed | failed
+  tags: graphite
+
+#
+# setup graphite user
+#
+- name: create graphite user
+  user: name={{ uwsgi_user }}
+  tags: graphite
+
+- name: change directory ownership
+  file: path={{ item }} state=directory recurse=yes owner={{ uwsgi_user }} group={{ uwsgi_user }}
+  with_items:
+    - "{{ graphite_root }}"
+    - "{{ graphite_var }}"
+  when: is_installed | failed
+  tags: graphite
+
+#
+# mysql settings
+#
+- name: create graphite db
+  mysql_db: name=graphite state=present
+  tags: graphite
+
+#
+# copy config files
+#
+- name: copy django/graphite settings
+  template: src={{ item }}.j2 dest={{ graphite_python }}/{{ item }}
+    owner={{ uwsgi_user }} group={{ uwsgi_user }} mode=0644 backup=yes
+  with_items: local_settings.py
+  tags: graphite
+
+- name: setup carbon conf and storage schemas
+  template: src=carbon/{{ item }}.j2 dest={{ carbon_conf_dir }}/{{ item }}
+    owner={{ carbon_user }} group={{ carbon_user }} mode=0644 backup=yes
+  with_items:
+    - carbon.conf
+    - storage-schemas.conf
+  notify: restart carbon-cache
+  tags: graphite
+
+- name: create log directory
+  file: path={{ graphite_log_dir }} owner={{ uwsgi_user }} group={{ uwsgi_user }} mode=0755 state=directory
+  tags: graphite
+
+#
+# setup uwsgi
+#
+- name: copy init script for graphite-web
+  template: src={{ item }}.j2 dest=/etc/init.d/{{ item }} owner=root group=root mode=0755
+  with_items: uwsgi_service
+  tags: graphite
+
+#
+# initial setup for graphite db
+#
+- name: find state of graphite db
+  command: "python {{ graphite_python }}/manage.py inspectdb"
+  register: result
+  changed_when: False
+  tags: graphite
+
+- name: prepare graphite db
+  command: "python {{ graphite_python }}/manage.py syncdb --noinput"
+  when: result.stdout.find('account_mygraph') == -1
+  tags: graphite
+
+- name: copy initial graphite data
+  copy: src=graphite-dump.json dest={{ graphite_python }}/initial_data.json
+  when: result.stdout.find('account_mygraph') == -1
+  tags: graphite
+
+- name: load initial data
+  command: "python {{ graphite_python }}/manage.py loaddata {{ graphite_python }}/initial_data.json"
+  when: result.stdout.find('account_mygraph') == -1
+  tags: graphite
+
+#
+# start services
+#
+- name: enable carbon, uwsgi-graphite
+  service: name={{ item }} enabled=yes state=started
+  with_items:
+    - "{{ carbon_service }}"
+    - "{{ uwsgi_service }}"
+  tags: graphite

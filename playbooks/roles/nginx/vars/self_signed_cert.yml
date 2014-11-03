@@ -1,0 +1,6 @@
+---
+cert_dir: /etc/nginx/cert
+key_path: "{{ cert_dir }}/server.key"
+csr_path: "{{ cert_dir }}/server.csr"
+cert_path: "{{ cert_dir }}/server.crt"
+cert_cname: "localhost"

@@ -1,0 +1,17 @@
+---
+- name: check if elasticsearch is installed
+  command: rpm -q elasticsearch
+  register: is_installed
+  ignore_errors: True
+  changed_when: False
+  failed_when: False
+  tags: elasticsearch
+
+- name: install elasticsearch
+  yum: name={{ download_url }} state=present
+  when: is_installed | failed
+  tags: elasticsearch
+
+- name: start elasticsearch
+  service: name=elasticsearch state=started enabled=yes
+  tags: elasticsearch

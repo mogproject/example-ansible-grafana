@@ -1,0 +1,26 @@
+---
+grafana_version: 1.8.1
+
+grafana_owner: nginx
+filename: grafana-{{ grafana_version }}.tar.gz
+download_url: http://grafanarel.s3.amazonaws.com/{{ filename }}
+path_to_download: "/tmp/{{ filename }}"
+
+grafana_root_path: /var/www/grafana
+grafana_default_route: /dashboard/file/default.json
+grafana_index: grafana-dash
+
+grafana_elasticsearch_url: "http://127.0.0.1:9200"
+grafana_graphite_url: "http://127.0.0.1:9001"
+
+grafana_nginx_listen: "{{ nginx_port }}"
+grafana_nginx_server_name: "127.0.0.1"
+grafana_nginx_enable_ssl: true
+grafana_nginx_ssl_cert_path: "/etc/nginx/cert/server.crt"
+grafana_nginx_ssl_key_path: "/etc/nginx/cert/server.key"
+nginx_port: 443
+
+nginx_auth:
+  path: "{{ grafana_root_path }}/.htpasswd"
+  user: "{{ grafana_user }}"
+  pass: "{{ grafana_pass }}"

@@ -1,0 +1,17 @@
+---
+#
+# install packages
+#
+- name: install mysql server
+  yum: name={{ item }} state=present enablerepo=epel
+  with_items:
+    - mysql-server
+    - MySQL-python
+  tags: mysql
+
+#
+# start service
+#
+- name: start mysqld
+  service: name={{ mysql_service }} state=started enabled=yes
+  tags: mysql

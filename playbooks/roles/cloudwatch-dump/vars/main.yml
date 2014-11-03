@@ -1,0 +1,19 @@
+---
+user: ec2-user
+
+home_dir: "/home/{{ user }}"
+script_dir: "{{ home_dir }}/cloudwatch-dump"
+
+package_name: cloudwatch-dump
+package_url: "git+https://github.com/mogproject/{{ package_name }}#egg={{ package_name }}"
+
+access_key: "{{ aws_cloudwatch_access_key_id }}"
+secret_key: "{{ aws_cloudwatch_secret_access_key }}"
+
+ec2_instances: []
+
+cron:
+  hour: "*"
+  minute: "5"
+  job: "{{ script_dir }}/cloudwatch_to_graphite.sh"
+

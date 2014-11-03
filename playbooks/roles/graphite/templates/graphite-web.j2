@@ -1,0 +1,102 @@
+#!/bin/sh
+#
+# {{ uwsgi_service }}
+#
+# chkconfig: - 85 15
+# description: Starts and stops graphite application server
+# processname uwsgi
+
+LANG=C
+
+PROG={{ uwsgi_service }}
+USER={{ uwsgi_user }}
+
+# path settings
+EXEC={{ uwsgi_path }}
+LOG_FILE=/var/log/$PROG.log
+PID_FILE=/var/run/$PROG.pid
+PYTHONPATH={{ graphite_pythonpath }}
+WSGI_FILE={{ uwsgi_file }}
+
+# uwsgi options
+UWSGI_OPTS="--http localhost:{{ uwsgi_port }}"
+UWSGI_OPTS="$UWSGI_OPTS --master --processes 4"
+UWSGI_OPTS="$UWSGI_OPTS --daemonize $LOG_FILE --pidfile $PID_FILE"
+UWSGI_OPTS="$UWSGI_OPTS --pythonpath $PYTHONPATH --chdir $PYTHONPATH"
+UWSGI_OPTS="$UWSGI_OPTS --uid $USER --gid $USER"
+UWSGI_OPTS="$UWSGI_OPTS --wsgi-file $WSGI_FILE"
+
+# source function library.
+. /etc/rc.d/init.d/functions
+
+# check user
+id=`id -u 2>/dev/null`
+if [ "$id" != "0" ]; then
+    echo "ERROR: must run $0 as root"
+    exit 1
+fi
+
+start() {
+    rh_status_q && return 0
+
+    echo -n "Starting $PROG: "
+    $EXEC $UWSGI_OPTS >/dev/null 2>&1
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && success || failure
+    echo
+    for i in $(seq 10); do
+        rh_status_q && return $RETVAL
+        sleep 1
+    done
+    return 1
+}
+
+stop() {
+    rh_status_q || return 0
+    
+    echo -n $"Stopping $PROG: "
+    if [ -e $PID_FILE ]; then
+        $EXEC --stop $PID_FILE
+    fi
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && success || failure
+    echo
+    for i in $(seq 10); do
+        rh_status_q || return $RETVAL
+        sleep 1
+    done
+    return 1
+}
+
+rh_status() {
+    status -p $PID_FILE $PROG
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+
+case "$1" in
+    start)
+        start
+        RETVAL=$?
+        ;;
+    stop)
+        stop
+        RETVAL=$?
+        ;;
+    restart)
+        stop && start
+        RETVAL=$?
+        ;;
+    status)
+        rh_status
+        RETVAL=$?
+        ;;
+    *)
+        echo "Usage: $PROG {start|stop|restart|status}" >&2
+        exit 2
+        ;;
+esac
+exit $RETVAL
