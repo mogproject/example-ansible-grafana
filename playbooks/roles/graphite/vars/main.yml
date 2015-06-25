@@ -48,5 +48,5 @@ uwsgi_service: graphite-web
 uwsgi_user: graphite
 uwsgi_port: 9001
 uwsgi_path: /usr/local/bin/uwsgi
-uwsgi_file: "{{ graphite_conf_dir }}/graphite.wsgi.example"
+uwsgi_file: "{{ graphite_conf_dir }}/graphite.wsgi"
 
