@@ -2,67 +2,42 @@
 #
 # install grafana
 #
-- name: check if grafana is installed
-  command: /usr/bin/test -e {{ grafana_root_path }}/grafana-{{ grafana_version}}/config.js
-  ignore_errors: True
-  changed_when: False
-  failed_when: False
-  register: is_installed
+- name: install yum repository
+  copy: src={{ item }} dest=/etc/yum.repos.d/{{ item }} owner=root group=root mode=0644
+  with_items:
+    - grafana.repo
   tags: grafana
 
-- name: download grafana
-  get_url: url={{ download_url }} dest={{ path_to_download }}
-  when: is_installed | failed
-  tags: grafana
+- name: install rpm gpg key
+  rpm_key: state=present key=https://grafanarel.s3.amazonaws.com/RPM-GPG-KEY-grafana
 
-- name: make grafana dir
-  file: path={{ grafana_root_path }} state=directory
-  when: is_installed | failed
-  tags: grafana
-
-- name: extract downloaded file
-  unarchive: copy=no src={{ path_to_download }} dest={{ grafana_root_path }}
-  when: is_installed | failed
-  tags: grafana
-
-- name: link grafana version
-  file: path={{ grafana_root_path }}/dist src={{ grafana_root_path }}/grafana-{{ grafana_version }} state=link owner={{ grafana_owner }}
-  when: is_installed | failed
-  tags: grafana
-
-- name: make config for grafana
-  template: src={{ item }}.j2 dest={{ grafana_root_path }}/dist/{{ item }} owner={{ grafana_owner }}
-  with_items: config.js
-  tags: grafana
-
-- name: remove downloaded file
-  file: path={{ path_to_download }} state=absent
+- name: install grafana
+  yum: name=grafana
   tags: grafana
 
 #
-# setup nginx
+# configure https
 #
-- name: make config for nginx
-  template: src=nginx/{{ item }}.j2 dest=/etc/nginx/conf.d/{{ item }} owner={{ grafana_owner }} mode=0644
-  with_items: grafana.conf
-  notify:
-    - reload nginx
+- include: self_signed_cert.yml
   tags: grafana
 
-- name: check if htpasswd file exists (we do not update)
-  command: /usr/bin/test -e {{ nginx_auth.path }}
-  ignore_errors: True
-  changed_when: False
-  failed_when: False
-  register: is_exist_htpasswd
+- name: rewrite grafana.ini
+  lineinfile:
+    dest: "{{ grafana_conf }}"
+    regexp: "^{{ item.key }} "
+    insertafter: "^;{{ item.key }} "
+    line: "{{ item.key }} = {{ item.value }}"
+    backup: yes
+  with_items:
+    - { key: "protocol", value: "https" }
+    - { key: "cert_file", value: "{{ cert_path }}" }
+    - { key: "cert_key", value: "{{ key_path }}" }
   tags: grafana
 
-- name: install htpasswd
-  yum: name=httpd-tools state=present
-  when: is_exist_htpasswd | failed
+#
+# start service
+#
+- name: start grafana-server
+  service: name=grafana-server state=started
   tags: grafana
 
-- name: make htpasswd file for basic auth
-  command: htpasswd -bc {{ nginx_auth.path }} {{ nginx_auth.user }} {{ nginx_auth.pass }}
-  when: is_exist_htpasswd | failed
-  tags: grafana

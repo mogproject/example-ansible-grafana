@@ -1,4 +1,0 @@
----
-- name: install pip
-  yum: name=python-pip state=present
-  tags: pip
