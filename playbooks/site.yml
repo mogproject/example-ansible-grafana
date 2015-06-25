@@ -1,23 +1,12 @@
 ---
 #
-# reporting to CloudWatch
-#
-
-- hosts: all
-  sudo: yes
-  roles:
-    - aws-scripts-mon
-
-#
 # monitoring and visualization
 #
 
 - hosts: all
   sudo: yes
   roles:
-    - nginx
     - mysql
     - graphite
-    - cloudwatch-dump
-    - elasticsearch
     - grafana
+

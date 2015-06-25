@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+# carbon-cache  init file for starting up the carbon-cache daemon
+#
+# chkconfig:   - 20 80
+# description: Starts and stops the carbon-cache daemon.
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+exec="/opt/graphite/bin/carbon-cache.py"
+
+[ -e /etc/sysconfig/carbon-cache ] && . /etc/sysconfig/carbon-cache
+
+start() {
+    echo -n $"Starting `basename $exec`: "
+    "$exec" start
+    retval=$?
+    [ $retval -eq 0 ] && success || failure
+    echo
+    return $retval
+}
+
+stop() {
+    echo -n $"Stopping `basename $exec`: "
+    "$exec" stop
+    retval=$?
+    [ $retval -eq 0 ] && success || failure
+    echo
+    return $retval
+}
+
+status() {
+    "$exec" status
+}
+
+case "$1" in
+    start|stop|status)
+        $1
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart}"
+        exit 2
+esac
+exit $?
+

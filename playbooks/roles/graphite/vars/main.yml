@@ -5,12 +5,12 @@
 carbon_storage_dir: "/var/lib/carbon"
 carbon_local_data_dir: "{{ carbon_storage_dir }}/whisper"
 carbon_whitelists_dir: "{{ carbon_storage_dir }}/lists"
-carbon_conf_dir: "/etc/carbon"
+carbon_conf_dir: "/opt/graphite/conf"
 carbon_log_dir: "/var/log/carbon"
 carbon_pid_dir: "/var/run"
 
 carbon_service: carbon-cache
-carbon_user: carbon
+carbon_user: root
 
 #
 # Whisper Settings
@@ -47,5 +47,6 @@ graphite_python: "{{ graphite_pythonpath }}/graphite"
 uwsgi_service: graphite-web
 uwsgi_user: graphite
 uwsgi_port: 9001
-uwsgi_path: /usr/bin/uwsgi
+uwsgi_path: /usr/local/bin/uwsgi
 uwsgi_file: "{{ graphite_conf_dir }}/graphite.wsgi.example"
+

@@ -1,24 +1,16 @@
 ---
-- name: add variables
-  include_vars: self_signed_cert.yml
-  tags: nginx
-
-- name: create directory
-  file: path={{ cert_dir }} state=directory owner=nginx group=nginx mode=0755
-  tags: nginx
-
 - name: check if cert exists
   command: /usr/bin/test -e {{ cert_path }}
   ignore_errors: True
   changed_when: False
   failed_when: False
   register: is_installed
-  tags: nginx
+  tags: grafana
 
 - name: create ssl key
   command: openssl genrsa -out {{ key_path }} 2048 creates={{ key_path }}
   when: is_installed | failed
-  tags: nginx
+  tags: grafana
 
 - name: create csr
   command: openssl req -new -key {{ key_path }} -out {{ csr_path }} -subj "/C={{ item.country_code }}/ST={{ item.state }}/L={{ item.location }}/O={{ item.organization }}/OU={{ item.organizational_unit }}/CN={{ item.cname }}" creates={{ csr_path }}
@@ -30,9 +22,9 @@
       organizational_unit:
       cname: "{{ cert_cname }}"
   when: is_installed | failed
-  tags: nginx
+  tags: grafana
 
 - name: create cert
   command: openssl x509 -req -days 3650 -in {{ csr_path }} -signkey {{ key_path }} -out {{ cert_path }} creates={{ cert_path }}
   when: is_installed | failed
-  tags: nginx
+  tags: grafana

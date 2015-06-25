@@ -5,8 +5,9 @@
 - name: install mysql server
   yum: name={{ item }} state=present enablerepo=epel
   with_items:
+    - gcc
     - mysql-server
-    - MySQL-python
+    - mysql-devel
   tags: mysql
 
 #
