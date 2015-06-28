@@ -3,142 +3,68 @@ Example for Provisioning Grafana with Ansible
 
 ## Setup Instructions
 
-### Step 1: Install provisioning tools
-
-- Install Vagrant => [Download](http://www.vagrantup.com/downloads.html)
-- Install Vagrant plugins
-
-    ```
-vagrant plugin install vagrant-aws
-vagrant plugin install dotenv
-    ```
-- Install Ansible => [Instruction Guide](http://docs.ansible.com/intro_installation.html#latest-releases-via-homebrew-mac-osx)
-
-
-### Step 2: Management with Amazon Web Services
-
-- Create AWS account
-- Sign into [AWS Management Console](https://console.aws.amazon.com/console/home?region=us-east-1#)
-- Create IAM user and group
-    - Services -> Deployment & Management -> IAM
-    - Create ```vagrant``` user with Power User Access
-        - Note access key id as **AWS_VAGRANT_ACCESS_KEY_ID**
-        - Note its secret as **AWS_VAGRANT_SECRET_ACCESS_KEY**
-    - Create ```cloudwatch``` user with CloudWatch Full Access
-        - Note access key id as **AWS_CLOUDWATCH_ACCESS_KEY_ID**
-        - Note its secret as **AWS_CLOUDWATCH_SECRET_ACCESS_KEY**
-- Create security group for EC2 in *North Virginia Region*
-    - Services -> Compute & Networking -> EC2 -> NETWORK & SECURITY -> Security Groups
-    - Create security group ```grafana```
-        - VPC: default VPC (not 'No VPC')
-        - Inbound:
-
-            | Type | Protocol | Port Range | Source |
-            |:-----|:---------|:-----------|:-------|
-            | SSH | TCP | 22 | Anywhere |
-            | HTTPS | TCP | 443 | Anywhere |
-
-        - Outbound: Allow all traffic
-        - Note group id as **AWS_SECURITY_GROUP**
-- Create key pair for EC2 in *North Virginia Region*
-    - Services -> Compute & Networking -> EC2 -> NETWORK & SECURITY -> Key Pairs
-    - Create key pair ```example-ansible-grafana``` and save ```example-ansible-grafana.pem``` in ```~/.ssh``` directory.
-    - Be sure the permission on the file is set to ```0600```.
-- Check out your subnet id
-    - Services -> Compute & Networking -> VPC -> Subnets
-    - Note subnet id of the default VPC in ```us-east-1b``` as **AWS_SUBNET_ID**
-
-
-### Step 3: Clone this repository
+### Step 1: Clone This Repository
 
 ```
 $ git clone https://github.com/mogproject/example-ansible-grafana
 $ cd example-vagrant-grafana
 ```
 
+### Step 2: Create EC2 Instance
 
-### Step 4: Create dotenv file
+- Create AWS account
+- Sign into [AWS Management Console](https://console.aws.amazon.com/console/home?region=us-east-1#)
+- Create EC2 instance with SSH key
+- Open inbound ports, SSH (TCP/22) and HTTPS (TCP/443)
 
-Create  ```.env``` in the ```example-vagrant-grafana``` directory with the following content.
+### Step 3: Connection Settings
 
-Set your variables noted before, and define user/password for Grafana.
+- Write `hosts` file with replacing...
+    - `xxx.xxx.xxx.xxx` = Public IP Address of your EC2 instance
+    - `path/to/pem` = Path to the private key
 
 ```
-# default provider
-VAGRANT_DEFAULT_PROVIDER="aws"
-
-# credentials
-AWS_VAGRANT_ACCESS_KEY_ID="XXXXXXXXXXXXXXXXXXXX"
-AWS_VAGRANT_SECRET_ACCESS_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-AWS_CLOUDWATCH_ACCESS_KEY_ID="XXXXXXXXXXXXXXXXXXXX"
-AWS_CLOUDWATCH_SECRET_ACCESS_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-
-# EC2 settings
-AWS_AVAILABILITY_ZONE="us-east-1b"
-AWS_SUBNET_ID="subnet-XXXXXXXX"
-AWS_SECURITY_GROUP="sg-XXXXXXXX"
-
-AWS_SSH_USERNAME="ec2-user"
-AWS_KEYPAIR_NAME="example-ansible-grafana"
-AWS_SSH_KEY="~/.ssh/${AWS_KEYPAIR_NAME}.pem"
-
-# Nginx basic auth for Grafana
-GRAFANA_USER="XXXXXX"
-GRAFANA_PASS="XXXXXX"
+example-grafana ansible_ssh_host=xxx.xxx.xxx.xxx ansible_ssh_user=ec2-user ansible_ssh_private_key_file=path/to/pem
 ```
 
-### Step 5: Provision it
+- Test connection
 
-- ```vagrant up```
+Output should be like the following.
 
+```
+$ ansible -i hosts -m ping all
+The authenticity of host 'xxx.xxx.xxx.xxx (xxx.xxx.xxx.xxx)' can't be established.
+RSA key fingerprint is yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy.
+Are you sure you want to continue connecting (yes/no)? yes
+example-grafana | success >> {
+    "changed": false,
+    "ping": "pong"
+}
+```
 
-It can take 5~10 minutes or more.  
-Public IP address will be automatically assigned.
+### Step 4: Provision It
 
+```
+$ ansible-playbook -i hosts ./playbooks/site.yml -v
+```
 
-## Touch with Grafana
-
-- Wait for an hour
-     - Because cloudwatch-dump will run on ```*:05``` for each hour.
-
-- Get the public IP address
-
-    ```
-$ vagrant ssh-config
-Host example-ansible-grafana
-    HostName YOUR_PUBLIC_IP
-    User ec2-user
-    Port 22
-    UserKnownHostsFile /dev/null
-    StrictHostKeyChecking no
-    PasswordAuthentication no
-    IdentityFile /path/to/example-ansible-grafana.pem
-    IdentitiesOnly yes
-    LogLevel FATAL
-    ```
+### Step 5: Play Grafana
 
 - Access to Grafana
-    - Launch web browser
-    - Access to url: ```https://YOUR_PUBLIC_IP/```
+    - Launch a web browser
+    - Access to url: ```https://xxx.xxx.xxx.xxx/``` (Your public IP address)
     - Accept untrusted certification
-    - Input username/password defined at Step 3
+    - Log in with username=`admin`, password=`admin`
+- Click the top-left menu icon
+- Data Sources -> Add new
+    - Name: `Graphite`
+    - Default: On
+    - Type: Graphite
+    - Url: `http://localhost:9001`
+    - Access: proxy
+    - Basic Auth: Enable: Off
+- Dashboards -> Home -> New
+- Row menu (gree button) -> Add Panel -> Graph -> Click on the title -> edit
+- Select the metrics (e.g. `carbon.agents.ip-xxx-xxx-xxx-xxx-a.memUsage`)
 
 
-## Operations
-
-|operation|command|
-|:--------|:------|
-| SSH login | ```$ vagrant ssh``` |
-| Rerun provisioning | ```$ vagrant provision``` |
-| Stop EC2 instance | ```$ vagrant halt``` |
-| Cleanup EC2 instance: | ```$ vagrant destroy``` |
-
-
-## Payment
-
-Watch out for the cost of AWS.
-
-- EC2 instance: We use t2.micro instance.
-- CloudWatch
-    - Custom metrics
-    - API calls

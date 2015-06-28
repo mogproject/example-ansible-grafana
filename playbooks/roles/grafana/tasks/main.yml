@@ -8,9 +8,6 @@
     - grafana.repo
   tags: grafana
 
-- name: install rpm gpg key
-  rpm_key: state=present key=https://grafanarel.s3.amazonaws.com/RPM-GPG-KEY-grafana
-
 - name: install grafana
   yum: name=grafana
   tags: grafana
@@ -24,20 +21,42 @@
 - name: rewrite grafana.ini
   lineinfile:
     dest: "{{ grafana_conf }}"
-    regexp: "^{{ item.key }} "
-    insertafter: "^;{{ item.key }} "
+    regexp: "^{{ item.key }} ="
+    insertafter: "^;{{ item.key }} ="
     line: "{{ item.key }} = {{ item.value }}"
     backup: yes
   with_items:
     - { key: "protocol", value: "https" }
     - { key: "cert_file", value: "{{ cert_path }}" }
     - { key: "cert_key", value: "{{ key_path }}" }
+    - { key: "http_port", value: "{{ grafana_port }}" }
+  notify: restart grafana-server
+  tags: grafana
+
+#
+# set permissions for opening 80/443 port to the binary
+#
+- name: get net bind permissions
+  shell: getcap {{ grafana_bin }}
+  register: grafana_getcap
+  failed_when: False
+  changed_when: False
+  tags: grafana
+
+- name: set net bind permissions
+  shell: setcap 'cap_net_bind_service=+ep' {{ grafana_bin }}
+  when: grafana_getcap.stdout.find('cap_net_bind_service=+ep') != -1
   tags: grafana
 
 #
 # start service
 #
 - name: start grafana-server
-  service: name=grafana-server state=started
+  service: name={{ grafana_service }} state=started
+  failed_when: False
+  tags: grafana
+
+- name: assume grafana-server is started
+  service: name={{ grafana_service }} state=started
   tags: grafana
 

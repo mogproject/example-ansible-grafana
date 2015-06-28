@@ -1,6 +1,7 @@
 ---
 - name: restart carbon-cache
-  service: name=carbon-cache state=restarted
+  service: name={{ carbon_service }} state=restarted
 
 - name: restart graphite-web
-  service: name=graphite-web state=restarted
+  service: name={{ uwsgi_service }} state=restarted
+

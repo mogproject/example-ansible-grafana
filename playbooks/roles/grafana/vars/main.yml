@@ -1,7 +1,12 @@
 ---
+grafana_bin: /usr/sbin/grafana-server
+grafana_service: grafana-server
+grafana_port: 443
+
 conf_dir: /etc/grafana
 grafana_conf: "{{ conf_dir }}/grafana.ini"
 key_path: "{{ conf_dir }}/server.key"
 csr_path: "{{ conf_dir }}/server.csr"
 cert_path: "{{ conf_dir }}/server.crt"
 cert_cname: "localhost"
+

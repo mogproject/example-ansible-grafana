@@ -1,4 +1,5 @@
 #!/bin/sh
+# {{ ansible_managed }}
 #
 # carbon-cache  init file for starting up the carbon-cache daemon
 #
@@ -27,6 +28,7 @@ stop() {
     retval=$?
     [ $retval -eq 0 ] && success || failure
     echo
+    sleep 5
     return $retval
 }
 

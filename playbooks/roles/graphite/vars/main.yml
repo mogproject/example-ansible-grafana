@@ -1,52 +1,30 @@
 ---
 #
+# Users
+#
+graphite_user: graphite
+
+#
+# Directories
+#
+graphite_root: /opt/graphite
+conf_dir: "{{ graphite_root }}/conf"
+app_dir: "{{ graphite_root }}/webapp/graphite"
+
+#
 # Carbon Settings
 #
-carbon_storage_dir: "/var/lib/carbon"
-carbon_local_data_dir: "{{ carbon_storage_dir }}/whisper"
-carbon_whitelists_dir: "{{ carbon_storage_dir }}/lists"
-carbon_conf_dir: "/opt/graphite/conf"
-carbon_log_dir: "/var/log/carbon"
-carbon_pid_dir: "/var/run"
-
+carbon_user: "{{ graphite_user }}"
 carbon_service: carbon-cache
-carbon_user: root
-
-#
-# Whisper Settings
-#
 whisper_default_time_per_point: 5m
 whisper_default_time_to_store: 730d
 
 #
-# Graphite General Settings
-#
-graphite_timezone: UTC
-graphite_log_rendering_performance: False
-graphite_log_cache_performance: False
-graphite_log_metric_access: False
-
-#
-# Filesystem Paths
-#
-graphite_root: /opt/graphite
-graphite_conf_dir: "{{ graphite_root }}/conf"
-graphite_storage_dir: "{{ carbon_storage_dir }}"
-graphite_content_dir: "{{ graphite_root }}/webapp/content"
-graphite_whisper_dir: "{{ carbon_local_data_dir }}"
-graphite_log_dir: "/var/log/graphite-web"
-graphite_var: "/var/lib/graphite-web"
-graphite_index_file: "{{ graphite_var }}/search_index"
-
-graphite_pythonpath: "{{ graphite_root }}/webapp"
-graphite_python: "{{ graphite_pythonpath }}/graphite"
-
-#
 # uWSGI Settings
 #
+uwsgi_user: "{{ graphite_user }}"
 uwsgi_service: graphite-web
-uwsgi_user: graphite
 uwsgi_port: 9001
 uwsgi_path: /usr/local/bin/uwsgi
-uwsgi_file: "{{ graphite_conf_dir }}/graphite.wsgi"
+uwsgi_file: "{{ conf_dir }}/graphite.wsgi"
 

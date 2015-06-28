@@ -15,7 +15,7 @@ USER={{ uwsgi_user }}
 EXEC={{ uwsgi_path }}
 LOG_FILE=/var/log/$PROG.log
 PID_FILE=/var/run/$PROG.pid
-PYTHONPATH={{ graphite_pythonpath }}
+PYTHONPATH={{ app_dir }}
 WSGI_FILE={{ uwsgi_file }}
 
 # uwsgi options

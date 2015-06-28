@@ -5,6 +5,7 @@
 - name: install dependencies
   yum: name={{ item }} state=present enablerepo=epel
   with_items:
+    - gcc
     - python-devel
     - python27-pycairo
   tags: graphite
@@ -12,7 +13,6 @@
 - name: install python libraries
   pip: name={{ item }} state=present
   with_items:
-    - "MySQL-python==1.2.5"
     - https://github.com/graphite-project/ceres/tarball/master
     - "whisper==0.9.13"
     - "carbon==0.9.13"
@@ -26,68 +26,56 @@
 # setup graphite user
 #
 - name: create graphite user
-  user: name={{ uwsgi_user }}
-  tags: graphite
-
-- name: change directory ownership
-  file: path={{ item }} state=directory recurse=yes owner={{ uwsgi_user }} group={{ uwsgi_user }}
+  user: name={{ item }}
   with_items:
-    - "{{ graphite_root }}"
-    - "{{ graphite_var }}"
+    - "{{ graphite_user }}"
   tags: graphite
 
 #
-# mysql settings
+# prepare config files
 #
-- name: create graphite db
-  mysql_db: name=graphite state=present
-  tags: graphite
-
-#
-# copy config files
-#
-- name: copy django/graphite settings
-  template: src={{ item }}.j2 dest={{ graphite_python }}/{{ item }}
-    owner={{ uwsgi_user }} group={{ uwsgi_user }} mode=0644 backup=yes
-  with_items: local_settings.py
-  tags: graphite
-
-- name: setup carbon conf and storage schemas
-  template: src=carbon/{{ item }}.j2 dest={{ carbon_conf_dir }}/{{ item }}
-    owner={{ carbon_user }} group={{ carbon_user }} mode=0644 backup=yes
+- name: copy configurations from example
+  shell: cp -fp {{ item }}.example {{ item }} creates={{ item }}
   with_items:
-    - carbon.conf
-    - storage-schemas.conf
+    - "{{ conf_dir }}/carbon.conf"
+    - "{{ conf_dir }}/storage-aggregation.conf"
+    - "{{ conf_dir }}/graphite.wsgi"
+    - "{{ app_dir }}/local_settings.py"
+  notify: restart graphite-web
+  tags: graphite
+
+- name: setup carbon settings
+  lineinfile: dest={{ conf_dir }}/carbon.conf regexp="^USER =" line="USER = {{ carbon_user }}"
   notify: restart carbon-cache
   tags: graphite
 
-- name: create log directory
-  file: path={{ graphite_log_dir }} owner={{ uwsgi_user }} group={{ uwsgi_user }} mode=0755 state=directory
+- name: setup whisper settings
+  template: src={{ item }}.j2 dest={{ conf_dir }}/{{ item }}
+    owner={{ carbon_user }} group={{ carbon_user }} mode=0644 backup=yes
+  with_items:
+    - storage-schemas.conf
+  notify: restart carbon-cache
   tags: graphite
 
 #
 # initial setup for graphite db
 #
 - name: find state of graphite db
-  command: "python {{ graphite_python }}/manage.py inspectdb"
-  register: result
+  command: "python {{ app_dir }}/manage.py inspectdb"
+  register: inspect_db
   changed_when: False
   failed_when: False
   tags: graphite
 
 - name: prepare graphite db
-  command: "python {{ graphite_python }}/manage.py syncdb --noinput"
-  when: result.stdout.find('account_mygraph') == -1
+  command: "python {{ app_dir }}/manage.py syncdb --noinput"
+  when: inspect_db.stdout.find('account_mygraph') == -1
   tags: graphite
 
-- name: copy initial graphite data
-  copy: src=graphite-dump.json dest={{ graphite_python }}/initial_data.json
-  when: result.stdout.find('account_mygraph') == -1
-  tags: graphite
-
-- name: load initial data
-  command: "python {{ graphite_python }}/manage.py loaddata {{ graphite_python }}/initial_data.json"
-  when: result.stdout.find('account_mygraph') == -1
+- name: change directory ownership
+  file: path={{ item }} state=directory recurse=yes owner={{ uwsgi_user }} group={{ uwsgi_user }}
+  with_items:
+    - "{{ graphite_root }}"
   tags: graphite
 
 #
@@ -100,7 +88,7 @@
     - "{{ uwsgi_service }}"
   tags: graphite
 
-- name: enable carbon, uwsgi-graphite
+- name: enable carbon and uwsgi
   service: name={{ item }} enabled=yes state=started
   with_items:
     - "{{ carbon_service }}"
