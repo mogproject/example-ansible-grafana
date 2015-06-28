@@ -6,7 +6,5 @@
 - hosts: all
   sudo: yes
   roles:
-#    - mysql
     - graphite
     - grafana
-
